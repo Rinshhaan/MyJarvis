@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#05070f">
+  <title>JARVIS // Rinshan</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #05070f;
+      --surface: rgba(18, 24, 38, 0.85);
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --cyan: #38bdf8;
+      --emerald: #10b981;
+      --violet: #818cf8;
+      --amber: #f59e0b;
+      --rose: #f43f5e;
+      --safe-top: env(safe-area-inset-top, 16px);
+      --safe-bottom: env(safe-area-inset-bottom, 16px);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      width: 100%;
+      height: 100dvh;
+      background: radial-gradient(circle at 50% 18%, #111a2e 0%, var(--bg) 75%);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 480px;
+      height: 100dvh;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding-top: max(14px, var(--safe-top));
+      padding-bottom: max(14px, var(--safe-bottom));
+      position: relative;
+    }
+
+    .header {
+      padding: 8px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .pulse-dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--muted); box-shadow: 0 0 10px var(--muted);
+      transition: all 0.25s ease;
+    }
+    .brand-name { font-size: 0.95rem; font-weight: 700; letter-spacing: 1.4px; color: #fff; }
+    .state-badge {
+      font-size: 0.72rem; font-weight: 600; letter-spacing: 0.8px;
+      padding: 5px 12px; border-radius: 999px; background: var(--surface);
+      border: 1px solid var(--border); color: var(--muted);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    }
+
+    .orb-stage {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 16px;
+      position: relative;
+    }
+    .orb-touch-zone {
+      width: clamp(140px, 38vw, 190px);
+      height: clamp(140px, 38vw, 190px);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    #orbCanvas { width: 100%; height: 100%; display: block; }
+    .orb-hint { font-size: 0.74rem; color: var(--muted); margin-top: 5px; text-align: center; }
+    .greeting-text {
+      font-size: clamp(1.1rem, 4.2vw, 1.35rem);
+      font-weight: 600; text-align: center; margin-top: 6px; padding: 0 12px;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+
+    .chat-stream {
+      flex: 1 1 auto;
+      width: 100%;
+      overflow-y: auto;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .chat-stream::-webkit-scrollbar { display: none; }
+
+    .msg {
+      max-width: 86%;
+      padding: 11px 15px;
+      border-radius: 18px;
+      font-size: 0.92rem;
+      line-height: 1.45;
+      word-wrap: break-word;
+      animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .msg.jarvis {
+      align-self: flex-start;
+      background: var(--surface);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      border-bottom-left-radius: 4px;
+      color: #f1f5f9;
+    }
+    .msg.user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      border-bottom-right-radius: 4px;
+      color: #ffffff;
+    }
+
+    .bottom-bar {
+      flex-shrink: 0;
+      padding: 10px 16px 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: linear-gradient(to top, var(--bg) 75%, transparent);
+    }
+
+    .call-btn {
+      width: 100%; height: 50px; border-radius: 16px; border: none;
+      font-family: inherit; font-size: 0.95rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      cursor: pointer; touch-action: manipulation;
+      background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+      color: #fff; box-shadow: 0 6px 24px rgba(37, 99, 235, 0.35);
+      transition: all 0.2s ease;
+    }
+    .call-btn.live {
+      background: rgba(244, 63, 94, 0.15);
+      border: 1.5px solid var(--rose);
+      color: #fda4af;
+      box-shadow: none;
+    }
+
+    .input-row { display: flex; gap: 8px; align-items: center; }
+    .input-row input {
+      flex: 1; height: 44px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 14px;
+      padding: 0 14px; color: #fff; font-family: inherit; font-size: 15px; outline: none;
+    }
+    .send-btn {
+      height: 44px; padding: 0 16px; border-radius: 14px; border: none;
+      background: rgba(56, 189, 248, 0.18); color: var(--cyan); font-weight: 600; cursor: pointer;
+    }
+
+    @media (min-width: 520px) {
+      .app-shell {
+        height: 94dvh; margin-top: 3dvh; border: 1px solid var(--border);
+        border-radius: 28px; box-shadow: 0 25px 70px rgba(0, 0, 0, 0.65);
+        background: rgba(8, 12, 24, 0.8); backdrop-filter: blur(20px);
+      }
+    }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: translateY(6px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-shell">
+    <header class="header">
+      <div class="brand">
+        <div class="pulse-dot" id="pulseDot"></div>
+        <span class="brand-name">J.A.R.V.I.S.</span>
+      </div>
+      <div class="state-badge" id="stateBadge">STANDBY</div>
+    </header>
+
+    <section class="orb-stage">
+      <div class="orb-touch-zone" id="orbZone" title="Tap orb to talk/send immediately">
+        <canvas id="orbCanvas"></canvas>
+      </div>
+      <h1 class="greeting-text" id="statusTitle">Ready, Rinshan.</h1>
+      <p class="orb-hint" id="orbHint">Tap "Start Live Session" to connect</p>
+    </section>
+
+    <main class="chat-stream" id="chatStream">
+      <div class="msg jarvis">
+        Online. Tap <b>Start Live Session</b> and speak freely in English or മലയാളം.
+      </div>
+    </main>
+
+    <footer class="bottom-bar">
+      <button class="call-btn" id="callBtn">
+        <span id="callBtnText">Start Live Session</span>
+      </button>
+
+      <form class="input-row" id="textForm">
+        <input type="text" id="textInput" placeholder="Message Jarvis in English / മലയാളം..." autocomplete="off">
+        <button type="submit" class="send-btn">Send</button>
+      </form>
+    </footer>
+  </div>
+
+  <audio id="player" playsinline></audio>
+
+  <script>
+    const callBtn = document.getElementById('callBtn');
+    const callBtnText = document.getElementById('callBtnText');
+    const orbZone = document.getElementById('orbZone');
+    const statusTitle = document.getElementById('statusTitle');
+    const orbHint = document.getElementById('orbHint');
+    const pulseDot = document.getElementById('pulseDot');
+    const stateBadge = document.getElementById('stateBadge');
+    const chatStream = document.getElementById('chatStream');
+    const player = document.getElementById('player');
+
+    let appState = 'IDLE'; // IDLE | LISTENING | THINKING | SPEAKING
+    let sessionActive = false;
+    let micStream = null;
+    let audioCtx = null;
+    let analyser = null;
+    let mediaRecorder = null;
+    let audioChunks = [];
+
+    let isSpeakingNow = false;
+    let silenceStart = 0;
+    let speechStart = 0;
+    const SPEECH_THRESHOLD = 5;
+    const SILENCE_DURATION_MS = 1100;
+
+    function updateStatus(state, title, hint) {
+      appState = state;
+      if (title) statusTitle.innerText = title;
+      if (hint) orbHint.innerText = hint;
+
+      const theme = {
+        IDLE: '#94a3b8',
+        LISTENING: '#10b981',
+        THINKING: '#f59e0b',
+        SPEAKING: '#38bdf8'
+      };
+      const color = theme[state] || '#94a3b8';
+      pulseDot.style.background = color;
+      pulseDot.style.boxShadow = `0 0 10px ${color}`;
+      stateBadge.innerText = state;
+      stateBadge.style.color = color;
+      stateBadge.style.borderColor = `${color}44`;
+    }
+
+    function addBubble(role, text) {
+      if (!text) return;
+      const div = document.createElement('div');
+      div.className = `msg ${role}`;
+      div.innerText = text;
+      chatStream.appendChild(div);
+      chatStream.scrollTo({ top: chatStream.scrollHeight, behavior: 'smooth' });
+    }
+
+    callBtn.addEventListener('click', async () => {
+      if (!sessionActive) {
+        await startLiveSession();
+      } else {
+        stopLiveSession();
+      }
+    });
+
+    orbZone.addEventListener('click', () => {
+      if (!sessionActive) {
+        startLiveSession();
+        return;
+      }
+      if (appState === 'SPEAKING') {
+        player.pause();
+        startListeningCycle();
+      } else if (appState === 'LISTENING' && mediaRecorder && mediaRecorder.state === 'recording') {
+        // Force commit voice
+        mediaRecorder.stop();
+      }
+    });
+
+    async function startLiveSession() {
+      try {
+        micStream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        });
+
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+        const source = audioCtx.createMediaStreamSource(micStream);
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+
+        sessionActive = true;
+        callBtn.classList.add('live');
+        callBtnText.innerText = 'End Conversation';
+
+        // Play initial greeting
+        updateStatus('THINKING', 'Jarvis Online', 'Connecting...');
+        try {
+          const greetRes = await fetch('/greet', { method: 'POST' });
+          const greetData = await greetRes.json();
+          if (greetData.reply_text) addBubble('jarvis', greetData.reply_text);
+          if (greetData.audio_base64) {
+            updateStatus('SPEAKING', 'Jarvis', 'Tap orb to speak');
+            await playBase64Audio(greetData.audio_base64);
+          }
+        } catch (e) {
+          console.warn("Greeting skipped", e);
+        }
+
+        if (sessionActive) startListeningCycle();
+
+      } catch (err) {
+        console.error(err);
+        updateStatus('IDLE', 'Mic Access Required', 'Please enable microphone access.');
+      }
+    }
+
+    function stopLiveSession() {
+      sessionActive = false;
+      isSpeakingNow = false;
+      player.pause();
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.onstop = null;
+        mediaRecorder.stop();
+      }
+      if (micStream) micStream.getTracks().forEach(t => t.stop());
+      callBtn.classList.remove('live');
+      callBtnText.innerText = 'Start Live Session';
+      updateStatus('IDLE', 'Session Ended', 'Tap to start again');
+    }
+
+    function getSupportedMimeType() {
+      const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac'];
+      for (const t of types) {
+        if (MediaRecorder.isTypeSupported(t)) return t;
+      }
+      return '';
+    }
+
+    function startListeningCycle() {
+      if (!sessionActive || !micStream) return;
+
+      audioChunks = [];
+      isSpeakingNow = false;
+      const mime = getSupportedMimeType();
+      mediaRecorder = mime ? new MediaRecorder(micStream, { mimeType: mime }) : new MediaRecorder(micStream);
+
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) audioChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        if (!sessionActive) return;
+        const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+        await sendAudioBlob(blob);
+      };
+
+      mediaRecorder.start(250);
+      updateStatus('LISTENING', 'Listening...', 'Speak in English or മലയാളം');
+    }
+
+    async function sendAudioBlob(blob) {
+      updateStatus('THINKING', 'Thinking...', 'Synthesizing response...');
+      const formData = new FormData();
+      formData.append('audio', blob, 'audio.webm');
+
+      try {
+        const res = await fetch('/talk', { method: 'POST', body: formData });
+        const data = await res.json();
+
+        if (!sessionActive) return;
+
+        if (data.ignore) {
+          startListeningCycle();
+          return;
+        }
+
+        if (data.error) {
+          updateStatus('LISTENING', 'Notice', data.error);
+          setTimeout(() => { if (sessionActive) startListeningCycle(); }, 1200);
+          return;
+        }
+
+        if (data.user_text && data.user_text !== "[Voice]") addBubble('user', data.user_text);
+        if (data.reply_text) addBubble('jarvis', data.reply_text);
+
+        if (data.audio_base64) {
+          updateStatus('SPEAKING', 'Jarvis', 'Tap orb to interrupt');
+          await playBase64Audio(data.audio_base64);
+        }
+
+        if (sessionActive) startListeningCycle();
+
+      } catch (err) {
+        if (sessionActive) startListeningCycle();
+      }
+    }
+
+    function playBase64Audio(b64) {
+      return new Promise((resolve) => {
+        player.src = 'data:audio/mp3;base64,' + b64;
+        player.onended = () => resolve();
+        player.onerror = () => resolve();
+        player.play().catch(() => resolve());
+      });
+    }
+
+    document.getElementById('textForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const input = document.getElementById('textInput');
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      input.blur();
+
+      addBubble('user', text);
+      player.pause();
+
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.onstop = null;
+        mediaRecorder.stop();
+      }
+
+      updateStatus('THINKING', 'Thinking...', 'Processing text...');
+      const formData = new FormData();
+      formData.append('text_input', text);
+
+      try {
+        const res = await fetch('/talk', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.reply_text) {
+          addBubble('jarvis', data.reply_text);
+          if (data.audio_base64) {
+            updateStatus('SPEAKING', 'Jarvis', 'Tap orb to interrupt');
+            await playBase64Audio(data.audio_base64);
+          }
+        }
+      } catch (err) {}
+
+      if (sessionActive) startListeningCycle();
+      else updateStatus('IDLE', 'Ready, Rinshan.', 'Tap Start Live Session');
+    });
+
+    // Canvas Orb Visualizer
+    const canvas = document.getElementById('orbCanvas');
+    const ctx = canvas.getContext('2d');
+    let dpr = window.devicePixelRatio || 1;
+
+    function resizeCanvas() {
+      const rect = orbZone.getBoundingClientRect();
+      dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    let phase = 0;
+    let smoothVol = 0;
+
+    // VAD Volume monitor loop
+    setInterval(() => {
+      if (!analyser || appState !== 'LISTENING') return;
+      const freq = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(freq);
+      let sum = 0;
+      for (let i = 0; i < freq.length; i++) sum += freq[i];
+      const rawVol = sum / freq.length;
+      const now = performance.now();
+
+      if (rawVol > SPEECH_THRESHOLD) {
+        if (!isSpeakingNow) {
+          isSpeakingNow = true;
+          speechStart = now;
+          statusTitle.innerText = "Hearing you...";
+        }
+        silenceStart = now;
+      } else if (isSpeakingNow) {
+        if (now - silenceStart > SILENCE_DURATION_MS && (now - speechStart) > 400) {
+          isSpeakingNow = false;
+          if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+          }
+        }
+      }
+    }, 40);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      phase += 0.04;
+
+      let rawVol = 0;
+      if (analyser && appState === 'LISTENING') {
+        const freq = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(freq);
+        let sum = 0;
+        for (let i = 0; i < freq.length; i++) sum += freq[i];
+        rawVol = sum / freq.length;
+      } else if (appState === 'SPEAKING') {
+        rawVol = 24 + Math.sin(phase * 3) * 14;
+      } else if (appState === 'THINKING') {
+        rawVol = 14 + Math.cos(phase * 4.5) * 8;
+      }
+
+      smoothVol += (rawVol - smoothVol) * 0.18;
+
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const cx = w / 2;
+      const cy = h / 2;
+      const minDim = Math.min(w, h);
+      const baseR = (minDim * 0.32) + (smoothVol * dpr * 0.45);
+
+      const colors = {
+        IDLE: ['#38bdf8', '#1d4ed8'],
+        LISTENING: isSpeakingNow ? ['#34d399', '#059669'] : ['#10b981', '#047857'],
+        THINKING: ['#fbbf24', '#d97706'],
+        SPEAKING: ['#818cf8', '#38bdf8']
+      };
+      const [c1, c2] = colors[appState] || colors.IDLE;
+
+      for (let layer = 0; layer < 3; layer++) {
+        ctx.beginPath();
+        const pts = 56;
+        for (let i = 0; i <= pts; i++) {
+          const a = (i / pts) * Math.PI * 2;
+          const w1 = Math.sin(a * 3 + phase + layer) * (4 * dpr + smoothVol * 0.18 * dpr);
+          const w2 = Math.cos(a * 4 - phase * 1.2 + layer) * (3 * dpr + smoothVol * 0.12 * dpr);
+          const r = baseR + w1 + w2 - (layer * 8 * dpr);
+          const x = cx + Math.cos(a) * r;
+          const y = cy + Math.sin(a) * r;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+
+        const grad = ctx.createRadialGradient(cx - baseR * 0.2, cy - baseR * 0.2, baseR * 0.1, cx, cy, baseR * 1.25);
+        grad.addColorStop(0, c1);
+        grad.addColorStop(0.7, c2);
+        grad.addColorStop(1, 'transparent');
+
+        ctx.fillStyle = grad;
+        ctx.globalAlpha = layer === 0 ? 0.35 : (layer === 1 ? 0.6 : 0.92);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1.0;
+    }
+
+    animate();
+  </script>
+</body>
+</html>
