@@ -13,7 +13,7 @@ from google.genai import types
 app = FastAPI(title="JARVIS AI Mentor")
 
 # Secure API key retrieval
-API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyAtf4kbAy6geZx01WknBcdNDt5HKiUFtyY")
+API_KEY = os.environ.get("GEMINI_API_KEY", "")
 client = genai.Client(api_key=API_KEY) if API_KEY else None
 
 # Models prioritized by speed and stability. Placed safely at the top level.
